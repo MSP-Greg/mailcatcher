@@ -38,7 +38,7 @@ module MailCatcher extend self
   end
 
   def windows?
-    RbConfig::CONFIG["host_os"] =~ /mswin|mingw/
+    RbConfig::CONFIG["host_os"].match?(/mswin|mingw/)
   end
 
   def browseable?
@@ -128,16 +128,12 @@ module MailCatcher extend self
           options[:quit] = false
         end
 
-        unless windows?
-          parser.on("-f", "--foreground", "Run in the foreground") do
-            options[:daemon] = false
-          end
+        parser.on("-f", "--foreground", "Run in the foreground") do
+          options[:daemon] = false unless windows?
         end
 
-        if browseable?
-          parser.on("-b", "--browse", "Open web browser") do
-            options[:browse] = true
-          end
+        parser.on("-b", "--browse", "Open web browser") do
+          options[:browse] = true if browseable?
         end
 
         parser.on("-v", "--verbose", "Be more verbose") do
@@ -193,7 +189,9 @@ module MailCatcher extend self
 
       # Make sure we quit nicely when asked
       # We need to handle outside the trap context, hence the timer
+      signals = Signal.list.keys
       %w(INT TERM QUIT).each do |signal|
+        next unless signals.include?(signal)
         trap(signal) { EM.add_timer(0) { quit! } }
       end
 
